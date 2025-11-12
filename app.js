@@ -130,13 +130,14 @@ function stopSpinning() {
 function showResult() {
     // 根据最终角度确定实际获奖的奖品
     const finalRotation = targetRotation % 360;
+    const pointerAngle = (360 - finalRotation + 360) % 360;
     let winnerIndex = 0;
-    
-    if (finalRotation < 180) {
+
+    if (pointerAngle < 180) {
         winnerIndex = 0; // 1积分
-    } else if (finalRotation < 280.8) {
+    } else if (pointerAngle < 288) {
         winnerIndex = 1; // 2积分
-    } else if (finalRotation < 318.6) {
+    } else if (pointerAngle < 342) {
         winnerIndex = 2; // 5积分
     } else {
         winnerIndex = 3; // 神秘玩具
@@ -157,8 +158,9 @@ function showResult() {
 function resetWheel() {
     resultModal.style.display = 'none';
     spinBtn.disabled = false;
+    stopBtn.disabled = true;
     wheel.style.transition = 'none';
-    
+
     // 为了让转盘下一次转动更自然，我们可以稍微调整当前角度
     // 这样指针不会总是指向同一个位置开始
     const randomOffset = Math.random() * 360;
