@@ -42,7 +42,7 @@ h1 {
     margin: 0 auto 30px;
 }
 
-/* 转盘样式 - 简化实现 */
+/* 转盘样式 - 由脚本生成多个等分区块 */
 .wheel {
     position: relative;
     width: 100%;
@@ -50,98 +50,81 @@ h1 {
     border-radius: 50%;
     overflow: hidden;
     transform-origin: center;
-    transition: transform 5s cubic-bezier(0.1, 0.7, 0.1, 1);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
+    border: 12px solid rgba(255, 255, 255, 0.8);
+    background: #fdebd0;
+    --label-distance: 120px;
 }
 
-/* 奖品样式 - 使用绝对定位直接放置在转盘上 */
-.prize {
+.wheel::before {
+    content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 50%;
-    height: 50%;
-    transform-origin: bottom right;
-    overflow: hidden;
+    top: 50%;
+    left: 50%;
+    width: 60%;
+    height: 60%;
+    background: rgba(255, 255, 255, 0.35);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.6);
+}
+
+/* 奖品标签沿圆周排布 */
+.segment-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 120px;
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
-    padding: 20px;
-    text-align: center;
+    gap: 10px;
+    transform-origin: center center;
+    transform: rotate(var(--angle)) translateY(calc(var(--label-distance) * -1)) rotate(calc(var(--angle) * -1));
 }
 
-/* 每个奖品区域的角度和颜色 - 根据概率分配角度 */
-.prize-1 {
-    background-color: #ff6b6b;
-    transform: rotate(0deg) skewY(18deg); /* 50% 概率区域 */
-}
-
-.prize-2 {
-    background-color: #4ecdc4;
-    transform: rotate(180deg) skewY(10.8deg); /* 30% 概率区域 */
-}
-
-.prize-3 {
-    background-color: #ffe66d;
-    transform: rotate(280.8deg) skewY(5.4deg); /* 15% 概率区域 */
-}
-
-.prize-4 {
-    background-color: #1a535c;
-    transform: rotate(318.6deg) skewY(1.8deg); /* 5% 概率区域 */
-}
-
-/* 奖品图片 - 极度简化，确保清晰可见 */
-.prize img {
-    width: 50px;
-    height: 50px;
+.segment-label img {
+    width: 60px;
+    height: 60px;
     object-fit: contain;
-    background-color: rgba(255, 255, 255, 0.3);
-    border-radius: 10px;
-    z-index: 100;
-    display: block;
-    position: relative;
-    /* 移除复杂transform，使用简单定位 */
-    margin-left: 30px;
-    margin-bottom: 10px;
+    background-color: rgba(255, 255, 255, 0.85);
+    border-radius: 16px;
+    padding: 6px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
 }
 
-/* 奖品文字 */
-.prize span {
+.segment-label span {
     font-weight: bold;
-    color: white;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-    font-size: 0.9rem;
-    z-index: 100;
-    position: relative;
-    /* 移除复杂transform，使用简单定位 */
-    margin-left: 20px;
+    color: #2c3e50;
+    text-shadow: 1px 1px 0 rgba(255, 255, 255, 0.7);
+    font-size: 1rem;
 }
 
 /* 指针样式 */
 .pointer {
     position: absolute;
-    top: -10px;
+    top: -20px;
     left: 50%;
     transform: translateX(-50%);
     width: 0;
     height: 0;
-    border-left: 20px solid transparent;
-    border-right: 20px solid transparent;
-    border-bottom: 30px solid #e74c3c;
-    z-index: 10;
+    border-left: 18px solid transparent;
+    border-right: 18px solid transparent;
+    border-bottom: 36px solid #e74c3c;
+    z-index: 15;
+    filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.2));
 }
 
 .pointer::after {
     content: '';
     position: absolute;
-    top: 100%;
+    top: calc(100% - 6px);
     left: 50%;
     transform: translateX(-50%);
-    width: 10px;
-    height: 10px;
-    background-color: #c0392b;
+    width: 18px;
+    height: 18px;
+    background-color: #ffffff;
+    border: 4px solid #c0392b;
     border-radius: 50%;
 }
 
@@ -268,21 +251,26 @@ h1 {
     h1 {
         font-size: 2rem;
     }
-    
+
     .wheel-container {
         width: 250px;
         height: 250px;
     }
-    
-    .prize img {
-        width: 40px;
-        height: 40px;
+
+    .wheel {
+        border-width: 10px;
+        --label-distance: 98px;
     }
-    
-    .prize span {
-        font-size: 0.8rem;
+
+    .segment-label img {
+        width: 48px;
+        height: 48px;
     }
-    
+
+    .segment-label span {
+        font-size: 0.9rem;
+    }
+
     .btn {
         padding: 10px 20px;
         font-size: 1rem;

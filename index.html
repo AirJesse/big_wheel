@@ -12,33 +12,9 @@
         
         <!-- 大转盘容器 -->
         <div class="wheel-container">
-            <!-- 简化版大转盘 - 直接使用圆形背景和绝对定位的奖品 -->
-            <div id="wheel" class="wheel">
-                <!-- 奖品1 - 50%概率 -->
-                <div class="prize prize-1">
-                    <img src="images/1point.svg" alt="1积分">
-                    <span>1积分</span>
-                </div>
-                
-                <!-- 奖品2 - 30%概率 -->
-                <div class="prize prize-2">
-                    <img src="images/2point.svg" alt="2积分">
-                    <span>2积分</span>
-                </div>
-                
-                <!-- 奖品3 - 15%概率 -->
-                <div class="prize prize-3">
-                    <img src="images/5point.svg" alt="5积分">
-                    <span>5积分</span>
-                </div>
-                
-                <!-- 奖品4 - 5%概率 -->
-                <div class="prize prize-4">
-                    <img src="images/mystery.svg" alt="神秘玩具">
-                    <span>神秘玩具</span>
-                </div>
-            </div>
-            
+            <!-- 大转盘由 JavaScript 按照奖品概率动态生成 -->
+            <div id="wheel" class="wheel"></div>
+
             <!-- 指针 -->
             <div class="pointer"></div>
         </div>
