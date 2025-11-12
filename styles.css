@@ -42,7 +42,7 @@ h1 {
     margin: 0 auto 30px;
 }
 
-/* 转盘样式 - 简化实现 */
+/* 转盘样式 - 由脚本生成多个等分区块 */
 .wheel {
     position: relative;
     width: 100%;
@@ -130,8 +130,7 @@ h1 {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
 }
 
-/* 奖品文字 */
-.prize span {
+.segment-label span {
     font-weight: bold;
     color: #ffffff;
     text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.4);

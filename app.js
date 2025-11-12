@@ -1,12 +1,12 @@
-// 奖品配置，包含概率和相关信息
+// 奖品配置，包含概率、图标和配色
 const prizes = [
-    { name: '1积分', probability: 50, image: 'images/1point.svg' },
-    { name: '2积分', probability: 30, image: 'images/2point.svg' },
-    { name: '5积分', probability: 15, image: 'images/5point.svg' },
-    { name: '神秘玩具', probability: 5, image: 'images/mystery.svg' }
+    { name: '1积分', probability: 50, image: 'images/1point.svg', color: '#FF6B6B' },
+    { name: '2积分', probability: 30, image: 'images/2point.svg', color: '#4ECDC4' },
+    { name: '5积分', probability: 15, image: 'images/5point.svg', color: '#FFE66D' },
+    { name: '神秘玩具', probability: 5, image: 'images/mystery.svg', color: '#1A535C' }
 ];
 
-// 获取DOM元素
+// DOM 元素
 const wheel = document.getElementById('wheel');
 const spinBtn = document.getElementById('spinBtn');
 const stopBtn = document.getElementById('stopBtn');
@@ -15,118 +15,245 @@ const resultImage = document.getElementById('resultImage');
 const resultText = document.getElementById('resultText');
 const closeModal = document.getElementById('closeBtn');
 
-// 状态变量
-let isSpinning = false;
-let spinInterval = null;
-let currentRotation = 0;
-let targetRotation = 0;
-let deceleration = 0;
+// 转盘状态
+const state = {
+    segments: [],
+    segmentAngle: 0,
+    gradientOffset: 0,
+    isSpinning: false,
+    isStopping: false,
+    animationFrame: null,
+    speed: 0,
+    currentRotation: 0,
+    targetRotation: 0,
+    selectedSegmentIndex: null
+};
 
-// 根据概率选择奖品
-function selectPrize() {
-    const random = Math.random() * 100;
-    let cumulativeProbability = 0;
-    
-    for (const prize of prizes) {
-        cumulativeProbability += prize.probability;
-        if (random < cumulativeProbability) {
-            return prize;
+const DESIRED_SEGMENT_COUNT = 20; // 需要的区块数量（保持大于 10）
+const MIN_EXTRA_SPINS = 3; // 停止时至少再多转几圈
+const ACCELERATION = 0.35;
+const MAX_SPEED = 18;
+
+function normalizeAngle(angle) {
+    return ((angle % 360) + 360) % 360;
+}
+
+function tintColor(hexColor, factor) {
+    const hex = hexColor.replace('#', '');
+    const num = parseInt(hex, 16);
+
+    let r = (num >> 16) & 0xff;
+    let g = (num >> 8) & 0xff;
+    let b = num & 0xff;
+
+    if (factor >= 0) {
+        r += (255 - r) * factor;
+        g += (255 - g) * factor;
+        b += (255 - b) * factor;
+    } else {
+        r *= 1 + factor;
+        g *= 1 + factor;
+        b *= 1 + factor;
+    }
+
+    const toHex = (value) => Math.round(Math.min(255, Math.max(0, value))).toString(16).padStart(2, '0');
+
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+function findSegmentIndexByRotation(rotation) {
+    if (!state.segments.length) {
+        return 0;
+    }
+
+    const normalizedRotation = normalizeAngle(rotation);
+    const pointerRaw = normalizeAngle(90 - normalizedRotation);
+    const pointerNormalized = normalizeAngle(pointerRaw - state.gradientOffset);
+    const index = Math.floor(pointerNormalized / state.segmentAngle);
+
+    return ((index % state.segments.length) + state.segments.length) % state.segments.length;
+}
+
+function allocateSegments(totalSegments) {
+    const allocations = prizes.map(prize => ({
+        prize,
+        count: Math.max(1, Math.round((prize.probability / 100) * totalSegments))
+    }));
+
+    let total = allocations.reduce((sum, item) => sum + item.count, 0);
+
+    while (total > totalSegments) {
+        const candidate = allocations
+            .filter(item => item.count > 1)
+            .sort((a, b) => a.prize.probability - b.prize.probability || a.count - b.count)[0];
+
+        if (!candidate) {
+            break;
+        }
+
+        candidate.count -= 1;
+        total -= 1;
+    }
+
+    while (total < totalSegments) {
+        const candidate = allocations.sort((a, b) => b.prize.probability - a.prize.probability)[0];
+        candidate.count += 1;
+        total += 1;
+    }
+
+    return allocations;
+}
+
+function buildSegments() {
+    const totalSegments = Math.max(DESIRED_SEGMENT_COUNT, prizes.length);
+    const allocations = allocateSegments(totalSegments);
+    const segments = [];
+    const pool = allocations.map(({ prize, count }) => ({ prize, remaining: count }));
+
+    while (segments.length < totalSegments) {
+        pool.sort((a, b) => b.remaining - a.remaining || b.prize.probability - a.prize.probability);
+        let placed = false;
+
+        for (const item of pool) {
+            if (item.remaining <= 0) {
+                continue;
+            }
+
+            if (segments.length > 0 && segments[segments.length - 1].name === item.prize.name) {
+                continue;
+            }
+
+            segments.push({ ...item.prize });
+            item.remaining -= 1;
+            placed = true;
+            break;
+        }
+
+        if (!placed) {
+            const fallback = pool.find(item => item.remaining > 0);
+            if (!fallback) {
+                break;
+            }
+
+            segments.push({ ...fallback.prize });
+            fallback.remaining -= 1;
         }
     }
-    
-    return prizes[0]; // 兜底返回第一个奖品
+
+    state.segments = segments;
+    state.segmentAngle = 360 / segments.length;
+    state.gradientOffset = 90 - state.segmentAngle / 2;
 }
 
-// 根据奖品确定最终旋转角度
-function getTargetRotation(prize) {
-    // 每个奖品对应的角度范围
-    const angleRanges = [
-        { start: 0, end: 180 },      // 1积分 (50%)
-        { start: 180, end: 280.8 },  // 2积分 (30%)
-        { start: 280.8, end: 318.6 }, // 5积分 (15%)
-        { start: 318.6, end: 360 }   // 神秘玩具 (5%)
-    ];
-    
-    const prizeIndex = prizes.findIndex(p => p.name === prize.name);
-    const range = angleRanges[prizeIndex];
-    
-    // 在奖品对应的角度范围内随机选择一个角度
-    const targetAngle = range.start + Math.random() * (range.end - range.start);
-    
-    // 添加5-10圈的旋转，让转盘转得更久
-    const fullSpins = 5 + Math.floor(Math.random() * 6);
-    
-    return (fullSpins * 360) + (360 - targetAngle); // 减去角度是因为指针在顶部
+function renderWheel() {
+    wheel.innerHTML = '';
+
+    const gradientStops = [];
+
+    state.segments.forEach((segment, index) => {
+        const start = index * state.segmentAngle;
+        const end = start + state.segmentAngle;
+        const shade = index % 2 === 0 ? tintColor(segment.color, 0.12) : tintColor(segment.color, -0.12);
+        gradientStops.push(`${shade} ${start}deg ${end}deg`);
+
+        const label = document.createElement('div');
+        label.className = 'segment-label';
+        const angle = start + state.segmentAngle / 2;
+        label.style.setProperty('--angle', `${angle}deg`);
+
+        const image = document.createElement('img');
+        image.src = segment.image;
+        image.alt = segment.name;
+
+        const text = document.createElement('span');
+        text.textContent = segment.name;
+
+        label.appendChild(image);
+        label.appendChild(text);
+        wheel.appendChild(label);
+    });
+
+    wheel.style.background = `conic-gradient(from ${state.gradientOffset}deg, ${gradientStops.join(', ')})`;
 }
 
-// 开始转动
+function step() {
+    if (!state.isSpinning) {
+        return;
+    }
+
+    if (state.speed < MAX_SPEED) {
+        state.speed = Math.min(MAX_SPEED, state.speed + ACCELERATION);
+    }
+
+    state.currentRotation += state.speed;
+    wheel.style.transform = `rotate(${state.currentRotation}deg)`;
+    state.animationFrame = requestAnimationFrame(step);
+}
+
 function startSpinning() {
-    if (isSpinning) return;
-    
-    isSpinning = true;
+    if (state.isSpinning || state.isStopping) {
+        return;
+    }
+
+    state.isSpinning = true;
+    state.isStopping = false;
+    state.speed = 0;
     spinBtn.disabled = true;
     stopBtn.disabled = false;
-    
-    // 选择一个奖品
-    const selectedPrize = selectPrize();
-    // 设置目标旋转角度
-    targetRotation = getTargetRotation(selectedPrize);
-    
-    // 设置初始速度和减速系数
-    let speed = 0;
-    const acceleration = 2; // 加速度
-    const maxSpeed = 15; // 最大速度
-    
-    // 清除之前的动画
+
     wheel.style.transition = 'none';
-    currentRotation = 0;
-    wheel.style.transform = 'rotate(0deg)';
-    
-    // 强制重绘
-    void wheel.offsetHeight;
-    
-    // 使用requestAnimationFrame实现平滑动画
-    function animate() {
-        if (!isSpinning) return;
-        
-        // 加速阶段
-        if (speed < maxSpeed) {
-            speed += acceleration;
-        }
-        
-        currentRotation += speed;
-        wheel.style.transform = `rotate(${currentRotation}deg)`;
-        
-        requestAnimationFrame(animate);
-    }
-    
-    animate();
+    cancelAnimationFrame(state.animationFrame);
+    state.animationFrame = null;
+    state.animationFrame = requestAnimationFrame(step);
 }
 
-// 停止转动
+function computeTargetRotation(segmentIndex) {
+    const targetNormalized = segmentIndex * state.segmentAngle + state.segmentAngle / 2;
+    const pointerRaw = state.gradientOffset + targetNormalized;
+    const alignmentAngle = normalizeAngle(90 - pointerRaw);
+
+    let target = alignmentAngle;
+    const minTarget = state.currentRotation + MIN_EXTRA_SPINS * 360;
+
+    while (target <= minTarget) {
+        target += 360;
+    }
+
+    if (target <= state.currentRotation) {
+        target += 360;
+    }
+
+    return target;
+}
+
 function stopSpinning() {
-    if (!isSpinning) return;
-    
-    // 确保目标角度始终大于当前角度，避免反向转动
-    if (targetRotation <= currentRotation) {
-        // 如果目标角度小于当前角度，添加额外的一圈
-        targetRotation += 360;
+    if (!state.isSpinning || state.isStopping) {
+        return;
     }
-    
-    // 设置减速动画
-    wheel.style.transition = 'transform 4s cubic-bezier(0.1, 0.7, 0.1, 1)';
-    wheel.style.transform = `rotate(${targetRotation}deg)`;
-    
-    isSpinning = false;
+
+    state.isStopping = true;
+    state.isSpinning = false;
     stopBtn.disabled = true;
-    
-    // 动画结束后显示结果
-    setTimeout(() => {
-        showResult();
-    }, 4000);
+
+    cancelAnimationFrame(state.animationFrame);
+    state.animationFrame = null;
+
+    const selectedSegmentIndex = Math.floor(Math.random() * state.segments.length);
+    state.selectedSegmentIndex = selectedSegmentIndex;
+    state.targetRotation = computeTargetRotation(selectedSegmentIndex);
+
+    const resolvedIndex = findSegmentIndexByRotation(state.targetRotation);
+    if (resolvedIndex !== selectedSegmentIndex) {
+        const difference = (selectedSegmentIndex - resolvedIndex + state.segments.length) % state.segments.length;
+        state.targetRotation += difference * state.segmentAngle;
+    }
+
+    requestAnimationFrame(() => {
+        wheel.style.transition = 'transform 4.5s cubic-bezier(0.18, 0.89, 0.32, 1.28)';
+        wheel.style.transform = `rotate(${state.targetRotation}deg)`;
+    });
 }
 
-// 显示结果
 function showResult() {
     // 根据最终角度确定实际获奖的奖品
     const finalRotation = targetRotation % 360;
@@ -154,7 +281,6 @@ function showResult() {
     resultModal.style.display = 'flex';
 }
 
-// 重置转盘
 function resetWheel() {
     resultModal.style.display = 'none';
     spinBtn.disabled = false;
@@ -164,21 +290,36 @@ function resetWheel() {
     // 为了让转盘下一次转动更自然，我们可以稍微调整当前角度
     // 这样指针不会总是指向同一个位置开始
     const randomOffset = Math.random() * 360;
-    currentRotation = randomOffset;
+    state.currentRotation = randomOffset;
+    state.targetRotation = randomOffset;
     wheel.style.transform = `rotate(${randomOffset}deg)`;
 }
 
-// 事件监听
+wheel.addEventListener('transitionend', (event) => {
+    if (event.propertyName !== 'transform' || !state.isStopping) {
+        return;
+    }
+
+    state.isStopping = false;
+    state.currentRotation = state.targetRotation;
+    wheel.style.transition = 'none';
+
+    const resolvedIndex = findSegmentIndexByRotation(state.currentRotation);
+    state.selectedSegmentIndex = resolvedIndex;
+
+    showResult();
+});
+
 spinBtn.addEventListener('click', startSpinning);
 stopBtn.addEventListener('click', stopSpinning);
 closeModal.addEventListener('click', resetWheel);
 
-// 点击弹窗外部关闭弹窗
-resultModal.addEventListener('click', (e) => {
-    if (e.target === resultModal) {
+resultModal.addEventListener('click', (event) => {
+    if (event.target === resultModal) {
         resetWheel();
     }
 });
 
-// 初始化转盘位置
+buildSegments();
+renderWheel();
 resetWheel();
