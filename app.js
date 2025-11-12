@@ -255,12 +255,29 @@ function stopSpinning() {
 }
 
 function showResult() {
-    const segment = state.segments[state.selectedSegmentIndex];
+    // 根据最终角度确定实际获奖的奖品
+    const finalRotation = targetRotation % 360;
+    const pointerAngle = (360 - finalRotation + 360) % 360;
+    let winnerIndex = 0;
 
-    resultImage.src = segment.image;
-    resultImage.alt = segment.name;
-    resultText.textContent = `恭喜你获得了${segment.name}！`;
-
+    if (pointerAngle < 180) {
+        winnerIndex = 0; // 1积分
+    } else if (pointerAngle < 288) {
+        winnerIndex = 1; // 2积分
+    } else if (pointerAngle < 342) {
+        winnerIndex = 2; // 5积分
+    } else {
+        winnerIndex = 3; // 神秘玩具
+    }
+    
+    const winner = prizes[winnerIndex];
+    
+    // 更新弹窗内容
+    resultImage.src = winner.image;
+    resultImage.alt = winner.name;
+    resultText.textContent = `恭喜你获得了${winner.name}！`;
+    
+    // 显示弹窗
     resultModal.style.display = 'flex';
 }
 
@@ -268,16 +285,10 @@ function resetWheel() {
     resultModal.style.display = 'none';
     spinBtn.disabled = false;
     stopBtn.disabled = true;
-
-    cancelAnimationFrame(state.animationFrame);
-    state.animationFrame = null;
-    state.isSpinning = false;
-    state.isStopping = false;
-    state.speed = 0;
-    state.selectedSegmentIndex = null;
-
     wheel.style.transition = 'none';
 
+    // 为了让转盘下一次转动更自然，我们可以稍微调整当前角度
+    // 这样指针不会总是指向同一个位置开始
     const randomOffset = Math.random() * 360;
     state.currentRotation = randomOffset;
     state.targetRotation = randomOffset;
