@@ -1,0 +1,290 @@
+/* 全局样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f8f9fa;
+    color: #333;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    background-image: linear-gradient(120deg, #84fab0 0%, #8fd3f4 100%);
+}
+
+.container {
+    background-color: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+}
+
+h1 {
+    color: #ff6b6b;
+    margin-bottom: 20px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 2.5rem;
+}
+
+/* 转盘容器 */
+.wheel-container {
+    position: relative;
+    width: 300px;
+    height: 300px;
+    margin: 0 auto 30px;
+}
+
+/* 转盘样式 - 简化实现 */
+.wheel {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    overflow: hidden;
+    transform-origin: center;
+    transition: transform 5s cubic-bezier(0.1, 0.7, 0.1, 1);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* 奖品样式 - 使用绝对定位直接放置在转盘上 */
+.prize {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 50%;
+    height: 50%;
+    transform-origin: bottom right;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    text-align: center;
+}
+
+/* 每个奖品区域的角度和颜色 - 根据概率分配角度 */
+.prize-1 {
+    background-color: #ff6b6b;
+    transform: rotate(0deg) skewY(18deg); /* 50% 概率区域 */
+}
+
+.prize-2 {
+    background-color: #4ecdc4;
+    transform: rotate(180deg) skewY(10.8deg); /* 30% 概率区域 */
+}
+
+.prize-3 {
+    background-color: #ffe66d;
+    transform: rotate(280.8deg) skewY(5.4deg); /* 15% 概率区域 */
+}
+
+.prize-4 {
+    background-color: #1a535c;
+    transform: rotate(318.6deg) skewY(1.8deg); /* 5% 概率区域 */
+}
+
+/* 奖品图片 - 极度简化，确保清晰可见 */
+.prize img {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+    z-index: 100;
+    display: block;
+    position: relative;
+    /* 移除复杂transform，使用简单定位 */
+    margin-left: 30px;
+    margin-bottom: 10px;
+}
+
+/* 奖品文字 */
+.prize span {
+    font-weight: bold;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    font-size: 0.9rem;
+    z-index: 100;
+    position: relative;
+    /* 移除复杂transform，使用简单定位 */
+    margin-left: 20px;
+}
+
+/* 指针样式 */
+.pointer {
+    position: absolute;
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 20px solid transparent;
+    border-right: 20px solid transparent;
+    border-bottom: 30px solid #e74c3c;
+    z-index: 10;
+}
+
+.pointer::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 10px;
+    height: 10px;
+    background-color: #c0392b;
+    border-radius: 50%;
+}
+
+/* 控制按钮样式 */
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.btn {
+    padding: 12px 24px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.spin-btn {
+    background-color: #27ae60;
+    color: white;
+    box-shadow: 0 4px 0 #219a52;
+}
+
+.spin-btn:hover:not(:disabled) {
+    background-color: #2ecc71;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #27ae60;
+}
+
+.stop-btn {
+    background-color: #e74c3c;
+    color: white;
+    box-shadow: 0 4px 0 #c0392b;
+}
+
+.stop-btn:hover:not(:disabled) {
+    background-color: #c0392b;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #a93226;
+}
+
+.btn:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* 结果弹窗样式 */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 40px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    animation: modalAppear 0.3s ease-out;
+    max-width: 350px;
+    width: 90%;
+}
+
+@keyframes modalAppear {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.modal-content h2 {
+    color: #ff6b6b;
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+}
+
+.result-image img {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 20px;
+    object-fit: contain;
+}
+
+.result-text {
+    font-size: 1.4rem;
+    font-weight: bold;
+    color: #34495e;
+    margin-bottom: 30px;
+}
+
+.close-btn {
+    background-color: #3498db;
+    color: white;
+    box-shadow: 0 4px 0 #2980b9;
+}
+
+.close-btn:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 0 #1f6dad;
+}
+
+/* 响应式设计 */
+@media (max-width: 480px) {
+    h1 {
+        font-size: 2rem;
+    }
+    
+    .wheel-container {
+        width: 250px;
+        height: 250px;
+    }
+    
+    .prize img {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .prize span {
+        font-size: 0.8rem;
+    }
+    
+    .btn {
+        padding: 10px 20px;
+        font-size: 1rem;
+    }
+}
